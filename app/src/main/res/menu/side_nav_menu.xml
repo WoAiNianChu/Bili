@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    tools:showIn="navigation_view">
+    <group
+        android:id="@+id/menu_follow"
+        android:checkableBehavior="single">
+        <item
+            android:id="@+id/nav_login"
+            android:title="@string/login" />
+        <item
+            android:id="@+id/nav_follower"
+            android:title="@string/follower" />
+        <item
+            android:id="@+id/nav_follows"
+            android:title="@string/follows" />
+    </group>
+    <group android:checkableBehavior="single">
+        <item
+            android:id="@+id/nav_favorites"
+            android:title="@string/title_favorites" />
+        <item
+            android:id="@+id/nav_history"
+            android:title="@string/title_history" />
+        <item
+            android:id="@+id/nav_settings"
+            android:title="@string/title_settings" />
+    </group>
+</menu>

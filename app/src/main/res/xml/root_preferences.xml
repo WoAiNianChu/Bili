@@ -1,0 +1,5 @@
+<PreferenceScreen xmlns:app="http://schemas.android.com/apk/res-auto">
+    <Preference
+        app:fragment="xyz.keriteal.bili.ui.settings.NetworkSettingsFragment"
+        app:title="@string/network" />
+</PreferenceScreen>

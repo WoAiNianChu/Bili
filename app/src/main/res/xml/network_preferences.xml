@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:title="@string/network">
+    <PreferenceCategory
+        android:key="proxy"
+        android:title="@string/proxy">
+        <ListPreference
+            android:defaultValue="HTTPS"
+            android:entries="@array/proxy_protocol_values"
+            android:entryValues="@array/proxy_protocol_values"
+            android:key="pref_proxy_protocol"
+            android:title="@string/proxy_protocol" />
+        <EditTextPreference
+            android:key="pref_proxy_host"
+            android:title="@string/proxy_host" />
+        <EditTextPreference
+            android:key="pref_proxy_port"
+            android:title="@string/proxy_port" />
+    </PreferenceCategory>
+
+    <PreferenceCategory
+        android:key="proxy_auth"
+        android:title="@string/proxy_auth">
+        <EditTextPreference
+            android:key="pref_proxy_auth_username"
+            android:title="@string/prompt_username" />
+        <EditTextPreference
+            android:key="pref_proxy_auth_password"
+            android:title="@string/prompt_password" />
+    </PreferenceCategory>
+</PreferenceScreen>

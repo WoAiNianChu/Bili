@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<shortcuts xmlns:android="http://schemas.android.com/apk/res/android">
+    <shortcut
+        android:enabled="true"
+        android:shortcutId="@+id/shortcut_history"
+        android:icon="@drawable/sync"
+        android:shortcutLongLabel="@string/shortcut_label_history"
+        android:shortcutShortLabel="@string/shortcut_label_history">
+        <intent
+            android:action="android.intent.action.VIEW"
+            android:targetClass="xyz.keriteal.bili.ui.history.HistoryActivity"
+            android:targetPackage="xyz.keriteal.bili.ui.history" />
+        <categories android:name="android.shortcut.conversation"/>
+    </shortcut>
+</shortcuts>

@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Bili</string>
+    <string name="title_home">主页</string>
+    <string name="login_failed">登陆失败</string>
+    <string name="action_sign_in_short">登陆</string>
+    <string name="prompt_password">密码</string>
+    <string name="prompt_username">用户名</string>
+    <string name="title_activity_login">登陆账号</string>
+    <string name="title_recommends">推荐</string>
+    <string name="title_favorites">收藏</string>
+    <string name="title_history">历史</string>
+    <string name="title_settings">设置</string>
+    <string name="title_activity_settings">设置</string>
+    <string name="shortcut_label_history">历史</string>
+    <string name="proxy">代理</string>
+    <string name="proxy_protocol">协议</string>
+    <string name="proxy_host">主机</string>
+    <string name="prompt_username_phone">用户名/手机号</string>
+    <string name="proxy_port">端口</string>
+    <string name="proxy_auth">代理验证</string>
+    <string name="auth">验证</string>
+    <string name="next">下一个</string>
+    <string name="previous">上一个</string>
+    <string name="sync_header">同步</string>
+    <string name="network">网络</string>
+    <string name="follower">粉丝</string>
+    <string name="follows">关注</string>
+    <string name="coins">硬币：</string>
+    <string name="no_url">没有Url</string>
+</resources>

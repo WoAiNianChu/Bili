@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <declare-styleable name="VideoPlayer">
+        <attr name="dialog_volume" format="string|reference" />
+        <attr name="dialog_brightness" format="string|reference" />
+        <attr name="backgroundColor" format="color" />
+
+        <attr name="autoPlay" format="boolean" />
+        <attr name="dismissControlsDuration" format="integer" />
+        <attr name="fastForwardSpeed" format="float" />
+        <attr name="gestureSensitivityProgress" format="float" />
+        <attr name="gestureSensitivityBrightness" format="float" />
+        <attr name="gestureSensitivityVolume" format="float" />
+        <attr name="gestureSwipingThresholdVertical" format="integer" />
+        <attr name="gestureSwipingThresholdHorizontal" format="integer" />
+        <attr name="doubleClickDuration" format="integer" />
+        <attr name="longPressingThreshold" format="integer" />
+    </declare-styleable>
+
+    <attr name="defaultStyleAttr" format="reference" />
+</resources>
