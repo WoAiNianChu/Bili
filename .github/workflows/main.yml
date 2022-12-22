@@ -11,7 +11,7 @@ jobs:
   # 构建
   build:
   # 构建应用使用的系统
-    runs-on: ubuntu-18.04
+    runs-on: ubuntu-20.04
 
   # 步骤
     steps:
