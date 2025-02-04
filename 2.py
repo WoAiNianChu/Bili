@@ -1,6 +1,6 @@
 """
-Excel 数据处理工具 - 商品名称合并版
-功能：通过命令行接收Excel文件路径，处理后生成带日期的副本文件
+Excel 数据处理工具 - 命令行版
+功能：通过命令行接收Excel文件路径，处理后生成带日期的副本文件，并合并商品别名与销量
 作者：YourName
 版本：1.0
 日期：2023-10-05
@@ -10,7 +10,16 @@ Excel 数据处理工具 - 商品名称合并版
 import os
 from datetime import datetime
 import threading
-import pandas as pd
+
+# ==================== 延迟加载模块 ====================
+def lazy_import_openpyxl():
+    """
+    后台线程加载openpyxl模块
+    目的：提升程序启动速度，避免主线程阻塞
+    """
+    global load_workbook
+    # 延迟导入大型库
+    from openpyxl import load_workbook  # 用于操作Excel文件的核心库
 
 # ==================== 主处理类 ====================
 class ExcelProcessorApp:
@@ -18,7 +27,8 @@ class ExcelProcessorApp:
     
     def __init__(self):
         """初始化方法"""
-        pass
+        # 启动后台线程预加载openpyxl
+        threading.Thread(target=lazy_import_openpyxl).start()
 
     def process_dropped_file(self, file_path):
         """
@@ -48,25 +58,28 @@ class ExcelProcessorApp:
         """
         try:
             # ---------- 文件加载 ----------
-            df = pd.read_excel(file_path)  # 加载DataFrame
+            from openpyxl import load_workbook  # 延迟加载
             
-            print("[系统] 文件加载成功，开始处理数据...")
+            # 注意：使用正常模式打开以便保存修改
+            wb = load_workbook(file_path)  # 加载工作簿对象
+            
+            print("[系统] 文件加载成功，开始处理工作表...")
 
-            # ---------- 数据处理 ----------
-            self._process_data(df)  # 处理数据
+            # ---------- 处理工作表 ----------
+            self._process_sales_sheet(wb)  # 处理销售表
 
             # ---------- 生成新文件名 ----------
             today = datetime.now()
             month = str(today.month).lstrip('0')  # 去除前导零（1月显示为1而不是01）
             day = str(today.day).lstrip('0')
-            new_file_name = f"处理后商品统计表_{month}.{day}.xlsx"  # 按需求生成文件名
+            new_file_name = f"济南 产品统计表{month}.{day}.xlsx"  # 按需求生成文件名
             new_file_path = os.path.join(
                 os.path.dirname(file_path),  # 保持与原文件相同目录
                 new_file_name
             )
 
             # ---------- 保存处理结果 ----------
-            df.to_excel(new_file_path, index=False)  # 保存为新文件
+            wb.save(new_file_path)  # 保存为新文件
             print(f"[成功] 文件已保存至：\n{new_file_path}")
 
         except PermissionError:
@@ -74,33 +87,53 @@ class ExcelProcessorApp:
         except Exception as e:
             print(f"[错误] 处理失败：{str(e)}")
 
-    def _process_data(self, df):
+    def _process_sales_sheet(self, wb):
         """
-        数据处理逻辑
+        处理销售表逻辑
         操作步骤：
-            1. 合并特定名称的商品
-            2. 将销量相加
-            3. 删除不需要的列
+            1. 统一商品名（含别名）
+            2. 合并销量
+            3. 删除其他列，保留商品名和销量
         参数：
-            df (DataFrame): pandas的DataFrame对象
+            wb (Workbook): openpyxl的工作簿对象
         """
-        # 定义一个函数，用于处理名称中的特定情况
-        def process_name(name):
+        sales_ws = wb.worksheets[1]  # 获取销售表（第二个工作表）
+
+        # 定义商品名合并规则
+        def merge_product_name(name):
             if '芝士酸奶' in name:
                 return '芝士酸奶'
             elif '零蔗糖酸奶' in name:
                 return '零蔗糖酸奶'
             else:
                 return name
+        
+        # 合并商品名并初始化销量字典
+        merged_data = {}
 
-        # 替换名称中的特定情况
-        df['名称'] = df['名称'].apply(process_name)
+        # 遍历所有行，进行商品名合并和销量相加
+        for row in range(3, sales_ws.max_row + 1):  # 从第3行开始，直到最后一行
+            product_name = sales_ws[f'名称{row}'].value  # 获取商品名
+            product_name = merge_product_name(product_name)  # 统一商品名
+            sales = sales_ws[f'销量{row}'].value  # 获取销量
+            
+            # 如果商品名已经存在，则将销量相加
+            if product_name in merged_data:
+                merged_data[product_name] += sales
+            else:
+                merged_data[product_name] = sales
+        
+        # 清空当前销售表（删除商品名和销量以外的列）
+        for row in range(3, sales_ws.max_row + 1):
+            for col in ['D', 'E', 'F', 'G', 'H', 'I']:  # 清空不需要的列
+                sales_ws[f'{col}{row}'].value = None
 
-        # 按商品名称合并销量
-        result_df = df.groupby('名称')['销量'].sum().reset_index()
-
-        # 选择需要的列
-        df = result_df[['名称', '销量']]
+        # 将合并后的商品名和销量写回表格
+        row_num = 3
+        for product_name, total_sales in merged_data.items():
+            sales_ws[f'名称{row_num}'].value = product_name
+            sales_ws[f'销量{row_num}'].value = total_sales
+            row_num += 1
 
 # ==================== 主程序入口 ====================
 if __name__ == "__main__":
@@ -137,4 +170,4 @@ if __name__ == "__main__":
             print("\n[系统] 程序已退出")
             break
         except Exception as e:
-            print(f"[错误] 发生异常：{str(e)}")
+            print(f"[错误] 发生错误：{str(e)}")
