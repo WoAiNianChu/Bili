@@ -36,5 +36,5 @@ jobs:
       uses: actions/upload-artifact@v4
       with:
         name: excel-processor-exe
-        path: ./dist/1.exe
+        path: ./dist/2.exe
         retention-days: 7
