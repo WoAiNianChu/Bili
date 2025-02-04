@@ -1,29 +1,8 @@
-"""
-Excel 数据处理工具 - 命令行版
-功能：处理Excel文件，合并相同商品的销量并输出结果
-作者：YourName
-版本：1.0
-日期：2025-02-04
-"""
-
-#==================== 标准库导入 ====================
-
 import os
 from datetime import datetime
 import threading
+from openpyxl import load_workbook
 
-#==================== 延迟加载模块 ====================
-
-def lazy_import_openpyxl():
-    """
-    后台线程加载openpyxl模块
-    目的：提升程序启动速度，避免主线程阻塞
-    """
-    global load_workbook
-    # 延迟导入大型库
-    from openpyxl import load_workbook  # 用于操作Excel文件的核心库
-
-#==================== 主处理类 ====================
 
 class ExcelProcessorApp:
     """Excel文件处理核心类"""
@@ -31,143 +10,148 @@ class ExcelProcessorApp:
     def __init__(self):
         """初始化方法"""
         # 启动后台线程预加载openpyxl
-        threading.Thread(target=lazy_import_openpyxl).start()
+        threading.Thread(target=self.lazy_import_openpyxl).start()
 
-    def process_dropped_file(self, file_path):
+    def lazy_import_openpyxl(self):
         """
-        处理文件入口方法
-        参数：
-            file_path (str): 用户输入的文件路径
+        后台线程加载openpyxl模块
+        目的：提升程序启动速度，避免主线程阻塞
         """
-        # 路径预处理（兼容拖放路径格式）
-        file_path = file_path.strip('"')  # 去除可能存在的双引号
-        file_path = os.path.normpath(file_path)  # 统一路径格式（处理正反斜杠）
+        global load_workbook
+        from openpyxl import load_workbook  # 用于操作Excel文件的核心库
 
-        # 路径有效性检查
-        if not os.path.exists(file_path):
+    def process_files(self):
+        """
+        处理商品排行报表和产品统计表
+        """
+        # 获取文件路径
+        ranking_file_path = input("请输入商品排行报表文件路径：").strip()
+        product_file_path = input("请输入产品统计表文件路径：").strip()
+
+        if not os.path.exists(ranking_file_path) or not os.path.exists(product_file_path):
             print("[错误] 文件路径无效，请检查路径是否正确")
             return
 
-        print(f"[系统] 开始处理文件：{os.path.basename(file_path)}")
+        # 处理商品排行报表
+        print(f"正在处理商品排行报表：{ranking_file_path}")
+        ranking_wb = load_workbook(ranking_file_path)
+        ranking_ws = ranking_wb.active  # 获取第一个工作表
+        product_sales = self.merge_product_sales(ranking_ws)
 
-        # 启动处理线程（避免界面卡顿）
-        threading.Thread(target=self._process_excel, args=(file_path,)).start()
+        # 处理产品统计表
+        print(f"正在处理产品统计表：{product_file_path}")
+        product_wb = load_workbook(product_file_path)
+        product_ws = product_wb.active  # 获取第一个工作表
 
-    def _process_excel(self, file_path):
+        # 将合并后的销量数据添加到产品统计表
+        self.update_product_sales(product_ws, product_sales)
+
+        # 保存处理后的产品统计表
+        today = datetime.now()
+        new_file_name = f"济南 产品统计表{today.month}.{today.day}.xlsx"
+        new_file_path = os.path.join(os.path.dirname(product_file_path), new_file_name)
+        product_wb.save(new_file_path)
+
+        print(f"[成功] 文件已保存至：{new_file_path}")
+
+    def merge_product_sales(self, ranking_ws):
         """
-        Excel处理核心方法
-        参数：
-            file_path (str): 需要处理的Excel文件路径
+        合并商品排行报表中相似名称的商品销量
+        :param ranking_ws: 商品排行报表工作表
+        :return: 合并后的销量数据字典
         """
-        try:
-            # ---------- 文件加载 ----------
-            from openpyxl import load_workbook  # 延迟加载
+        product_sales = {}
 
-            # 注意：使用正常模式打开以便保存修改
-            wb = load_workbook(file_path)  # 加载工作簿对象
+        for row in range(2, ranking_ws.max_row + 1):  # 从第2行开始读取
+            product_name = ranking_ws[f'C{row}'].value
+            quantity = ranking_ws[f'F{row}'].value
 
-            print("[系统] 文件加载成功，开始处理工作表...")
+            # 确保 quantity 是数字类型，如果是字符串，尝试转换为数字
+            try:
+                quantity = float(quantity)  # 将销量值转换为浮动类型
+            except (ValueError, TypeError):
+                quantity = 0  # 如果无法转换为数字，则设为0
 
-            # ---------- 工作表处理 ----------
-            self._process_sales_sheet(wb)  # 处理销售表
+            # 处理特殊合并规则
+            if "草莓" in product_name and "鲜牛乳" in product_name:
+                product_name = "草莓冷萃鲜牛乳"
+            elif "开心果" in product_name and "鲜牛乳" in product_name:
+                product_name = "开心果冷萃鲜牛乳"
+            elif "抹茶" in product_name and "鲜牛乳" in product_name:
+                product_name = "抹茶冷萃鲜牛乳"
+            elif ("芋泥" in product_name or "香芋" in product_name) and "鲜牛乳" in product_name:
+                product_name = "香芋冷萃鲜牛乳"
+            elif "蔓越莓" in product_name:
+                product_name = "蔓越莓胶原酸奶"
+            elif "双蛋白" in product_name:
+                product_name = "双蛋白酸奶"
+            elif "零蔗糖" in product_name:
+                product_name = "零蔗糖酸奶"
+            elif "芝士" in product_name:
+                product_name = "芝士酸奶"
+            elif "紫米" in product_name:
+                product_name = "紫米酸奶"
+            elif "鲜牛奶" in product_name:
+                product_name = "鲜牛奶"
+            elif "液体酸奶" in product_name:
+                product_name = "液体酸奶"
+            elif "奶皮子" in product_name:
+                product_name = "奶皮子酸奶酪"
+            elif "布丁" in product_name:
+                product_name = "布丁"
+            elif "生巧" in product_name:
+                product_name = "生巧可可牛奶"
+            elif "香蕉" in product_name:
+                product_name = "香蕉牛奶"
+            elif "半口" in product_name:
+                product_name = "半口奶酪"
+            elif "罐罐" in product_name:
+                product_name = "冷萃酸奶罐罐"
+            elif "酸奶碗" in product_name:
+                product_name = "酸奶碗—开心果能量"
+     
+            # 处理双皮奶合并规则：只合并果味双皮奶，不合并原味
+            elif "双皮奶" in product_name and "原味" not in product_name:
+                product_name = "果味双皮奶"
 
-            # ---------- 生成新文件名 ----------
-            today = datetime.now()
-            month = str(today.month).lstrip('0')  # 去除前导零（1月显示为1而不是01）
-            day = str(today.day).lstrip('0')
-            new_file_name = f"销量统计表{month}.{day}.xlsx"  # 按需求生成文件名
-            new_file_path = os.path.join(
-                os.path.dirname(file_path),  # 保持与原文件相同目录
-                new_file_name
-            )
+            # 累计销量
+            if product_name not in product_sales:
+                product_sales[product_name] = 0
+            product_sales[product_name] += quantity
 
-            # ---------- 保存处理结果 ----------
-            wb.save(new_file_path)  # 保存为新文件
-            print(f"[成功] 文件已保存至：\n{new_file_path}")
+        return product_sales
 
-        except PermissionError:
-            print("[错误] 文件被占用，请关闭Excel后重试")
-        except Exception as e:
-            print(f"[错误] 处理失败：{str(e)}")
-
-    def _process_sales_sheet(self, wb):
+    def update_product_sales(self, product_ws, product_sales):
         """
-        处理销售表逻辑
-        操作步骤：
-            1. 合并相同商品的销量
-            2. 删除其他不必要的列
-            3. 最终只保留商品名称和销量
-        参数：
-            wb (Workbook): openpyxl的工作簿对象
+        将商品销量更新到产品统计表
+        :param product_ws: 产品统计表工作表
+        :param product_sales: 合并后的销量数据字典
         """
-        sales_ws = wb.worksheets[1]  # 获取第二个工作表
+        for row in range(2, product_ws.max_row + 1):  # 从第2行开始读取
+            product_name = product_ws[f'B{row}'].value  # 获取产品名称
 
-        # 用一个字典存储合并后的商品名和销量
-        merged_data = defaultdict(int)
+            # 检查商品名称是否在合并后的销量数据中
+            if product_name in product_sales:
+                # 更新销量
+                product_ws[f'D{row}'].value = product_sales[product_name]
+                print(f"[更新] {product_name} - 销量: {product_sales[product_name]}")
 
-        # 遍历所有行
-        for row in range(2, sales_ws.max_row + 1):  # 假设第1行是标题
-            product_name = sales_ws[f'C{row}'].value
-            sales = sales_ws[f'F{row}'].value
-
-            if product_name is None or sales is None:
-                continue  # 跳过空值
-
-            # 对商品名进行标准化（芝士酸奶、零蔗糖酸奶）
-            if '芝士酸奶' in product_name:
-                product_name = '芝士酸奶'
-            if '零蔗糖酸奶' in product_name:
-                product_name = '零蔗糖酸奶'
-
-            # 合并相同商品名的销量
-            merged_data[product_name] += sales
-
-        # 清空所有列，保留A列和B列
-        for row in range(2, sales_ws.max_row + 1):
-            for col in range(1, sales_ws.max_column + 1):
-                sales_ws.cell(row=row, column=col).value = None
-
-        # 将合并后的商品名和销量写回到A列和B列
-        new_row = 2
-        for product_name, total_sales in merged_data.items():
-            sales_ws[f'A{new_row}'] = product_name
-            sales_ws[f'B{new_row}'] = total_sales
-            new_row += 1
-
-#==================== 主程序入口 ====================
-
+# ==================== 主程序入口 ====================
 if __name__ == "__main__":
     # 初始化应用程序
     app = ExcelProcessorApp()
 
-    # 用户交互界面  
-    print("="*50)  
-    print("Excel文件处理工具")  
-    print("使用方法：")  
-    print("1. 直接输入文件路径（如：C:\\文件.xlsx）")  
-    print("2. 拖拽文件到本窗口自动获取路径")  
-    print("3. 按Ctrl+C退出程序")  
-    print("="*50)  
+    # 用户交互界面
+    print("="*50)
+    print("Excel文件处理工具")
+    print("使用方法：")
+    print("1. 请输入商品排行报表和产品统计表的文件路径")
+    print("2. 按Ctrl+C退出程序")
+    print("="*50)
 
-    while True:  
-        try:  
-            # 获取用户输入  
-            file_path = input("\n请输入Excel文件路径：").strip()  
-
-            # 处理退出命令  
-            if file_path.lower() in ('exit', 'quit'):  
-                break  
-
-            # 处理空输入  
-            if not file_path:  
-                print("[提示] 输入不能为空，请重新输入")  
-                continue  
-
-            # 开始处理  
-            app.process_dropped_file(file_path)  
-
-        except KeyboardInterrupt:  
-            print("\n[系统] 程序已退出")  
-            break  
-        except Exception as e:  
-            print(f"[错误] 发生错误：{str(e)}")
+    try:
+        app.process_files()
+    except KeyboardInterrupt:
+        print("\n[系统] 程序已退出")
+    except Exception as e:
+        print(f"[错误] 发生未知错误：{str(e)}")
