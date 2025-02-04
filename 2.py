@@ -23,7 +23,7 @@ def lazy_import_openpyxl():
     # 延迟导入大型库
     from openpyxl import load_workbook  # 用于操作Excel文件的核心库
 
-==================== 主处理类 ====================
+#==================== 主处理类 ====================
 
 class ExcelProcessorApp:
     """Excel文件处理核心类"""
