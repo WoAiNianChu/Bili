@@ -21,12 +21,10 @@ class ExcelProcessorApp:
         from openpyxl import load_workbook  # 用于操作Excel文件的核心库
 
     def process_files(self):
-        """
-        处理商品排行报表和产品统计表
-        """
-        # 获取文件路径
-        ranking_file_path = input("请输入商品排行报表文件路径：").strip()
-        product_file_path = input("请输入产品统计表文件路径：").strip()
+        """处理商品排行报表和产品统计表"""
+        # 获取文件路径并去除引号
+        ranking_file_path = input("请输入商品排行报表文件路径：").strip().strip("'\"")
+        product_file_path = input("请输入产品统计表文件路径：").strip().strip("'\"")
 
         if not os.path.exists(ranking_file_path) or not os.path.exists(product_file_path):
             print("[错误] 文件路径无效，请检查路径是否正确")
