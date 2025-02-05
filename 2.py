@@ -63,7 +63,7 @@ class ExcelProcessorApp:
         :return: 合并后的销量数据字典，和分别映射到饿了么外卖和美团外卖的销量
         """
         product_sales = {}
-        e_sales = {'饿了么外卖': {}, '美团外卖': {}}  # 用于存储饿了么外卖和美团外卖销量
+        e_sales = {'饿了么外卖': {}, '美团外卖': {}}  # 用于存储饿了么外卖外脑和美团外卖销量
 
         for row in range(2, ranking_ws.max_row + 1):  # 从第2行开始读取
             product_name = ranking_ws[f'C{row}'].value
@@ -72,7 +72,7 @@ class ExcelProcessorApp:
 
             # 确保 quantity 是数字类型，如果是字符串，尝试转换为数字
             try:
-                quantity = float(quantity)  # 将销量值转换为浮点数
+                quantity = float(quantity)  # 将销量值转换为浮动类型
             except (ValueError, TypeError):
                 quantity = 0  # 如果无法转换为数字，则设为0
 
@@ -113,6 +113,8 @@ class ExcelProcessorApp:
                 product_name = "冷萃酸奶罐罐"
             elif "酸奶碗" in product_name:
                 product_name = "酸奶碗—开心果能量"
+
+            # 处理双皮奶合并规则：只合并果味双皮奶，不合并原味
             elif "双皮奶" in product_name and "原味" not in product_name:
                 product_name = "果味双皮奶"
 
@@ -146,16 +148,66 @@ class ExcelProcessorApp:
             # 更新销量
             if product_name in product_sales:
                 product_ws[f'D{row}'].value = product_sales[product_name]
+                print(f"[更新] {product_name} - 总销量: {product_sales[product_name]}")
 
             # 更新饿了么外卖销量
             if product_name in e_sales['饿了么外卖']:
                 product_ws[f'H{row}'].value = e_sales['饿了么外卖'][product_name]
+                print(f"[更新] {product_name} - 饿了么外卖销量: {e_sales['饿了么外卖'][product_name]}")
 
             # 更新美团外卖销量
             if product_name in e_sales['美团外卖']:
                 product_ws[f'G{row}'].value = e_sales['美团外卖'][product_name]
+                print(f"[更新] {product_name} - 美团外卖销量: {e_sales['美团外卖'][product_name]}")
 
             # 只有当D列有值时才添加E列公式
             if product_ws[f'D{row}'].value is not None and product_ws[f'D{row}'].value != "":
                 if 3 <= row <= 29:
                     product_ws[f'E{row}'].value = f"=D{row} - SUM(F{row}:I{row})"
+                    #print(f"[添加公式] 第{row}行 E列公式：=D{row} - SUM(F{row}:I{row})")
+
+    def sanitize_path(self, raw_input):
+        """
+        智能清理用户输入的路径
+        :param raw_input: 用户原始输入
+        :return: 验证后的有效路径
+        """
+        # 提取所有被引号包裹的内容
+        quoted_paths = re.findall(r'["\'](.*?)["\']', raw_input)
+
+        if quoted_paths:
+            # 取最后一个被引号包裹的内容（最可能的路径）
+            clean_path = quoted_paths[-1].strip()
+        else:
+            # 若无引号，去除首尾特殊字符
+            clean_path = raw_input.strip(" &'\"")
+
+        # 二次验证路径格式
+        if re.match(r'^[a-zA-Z]:\\', clean_path):  # 匹配Windows路径格式
+            return clean_path
+        if os.path.sep in clean_path:  # 匹配Linux/macOS路径格式
+            return clean_path
+
+        # 若仍无法识别，尝试原始输入处理
+        return raw_input.strip("'\" ")
+
+
+# ==================== 主程序入口 ====================
+if __name__ == "__main__":
+    # 初始化应用程序
+    app = ExcelProcessorApp()
+
+    # 用户交互界面（保持不变）
+    print("="*50)
+    print("Excel文件处理工具")
+    print("使用方法：")
+    print("1. 请输入商品排行报表和产品统计表的文件路径")
+    print("2. 按Ctrl+C退出程序")
+    print("="*50)
+
+    try:
+        app.process_files()
+    except KeyboardInterrupt:
+        print("\n[系统] 程序已退出")
+    except Exception as e:
+        print(f"[错误] 发生未知错误：{str(e)}")
