@@ -34,7 +34,7 @@ class ExcelProcessorApp:
         # 读取商品排行报表（只修改销售表）
         print(f"正在处理商品排行报表：{ranking_file_path}")
         ranking_wb = load_workbook(ranking_file_path)
-        sales_ws = ranking_wb.worksheets[1]  # 只读取销售表
+        sales_ws = ranking_wb.worksheets[0] 
 
         # 读取产品统计表（只修改销售表）
         print(f"正在处理产品统计表：{product_file_path}")
