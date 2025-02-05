@@ -21,40 +21,40 @@ class ExcelProcessorApp:
         global load_workbook
         from openpyxl import load_workbook  # 用于操作Excel文件的核心库
 
-    def process_files(self):
-        """处理商品排行报表和产品统计表"""
-        # 获取文件路径并智能提取有效路径
-        ranking_file_path = self.sanitize_path(input("请输入商品排行报表文件路径："))
-        product_file_path = self.sanitize_path(input("请输入产品统计表文件路径："))
+def process_files(self):
+    """处理商品排行报表和产品统计表（只修改销售表）"""
+    ranking_file_path = self.sanitize_path(input("请输入商品排行报表文件路径："))
+    product_file_path = self.sanitize_path(input("请输入产品统计表文件路径："))
 
-        if not os.path.exists(ranking_file_path) or not os.path.exists(product_file_path):
-            print("[错误] 文件路径无效，请检查路径是否正确")
-            input("按回车键退出...")
-            return
-        
-        # 处理商品排行报表
-        print(f"正在处理商品排行报表：{ranking_file_path}")
-        ranking_wb = load_workbook(ranking_file_path)
-        ranking_ws = ranking_wb.active  # 获取第一个工作表
-        product_sales, e_sales = self.merge_product_sales(ranking_ws)
+    if not os.path.exists(ranking_file_path) or not os.path.exists(product_file_path):
+        print("[错误] 文件路径无效，请检查路径是否正确")
+        input("按回车键退出...")
+        return
 
-        # 处理产品统计表
-        print(f"正在处理产品统计表：{product_file_path}")
-        product_wb = load_workbook(product_file_path)
-        product_ws = product_wb.active  # 获取第一个工作表
+    # 读取商品排行报表（只修改销售表）
+    print(f"正在处理商品排行报表：{ranking_file_path}")
+    ranking_wb = load_workbook(ranking_file_path)
+    sales_ws = ranking_wb.worksheets[1]  # 只读取销售表
 
-        # 将合并后的销量数据添加到产品统计表
-        self.update_product_sales(product_ws, product_sales, e_sales)
+    # 读取产品统计表（只修改销售表）
+    print(f"正在处理产品统计表：{product_file_path}")
+    product_wb = load_workbook(product_file_path)
+    product_ws = product_wb.worksheets[1]  # 只修改第二个表（销售数据）
 
-        # 保存处理后的产品统计表
-        today = datetime.now()
-        new_file_name = f"济南 产品统计表{today.month}-{today.day}.xlsx"
-        new_file_path = os.path.join(os.path.dirname(product_file_path), new_file_name)
-        product_wb.save(new_file_path)
+    # 读取销售表并合并数据
+    product_sales, e_sales = self.merge_product_sales(sales_ws)
 
-        print(f"[成功] 文件已保存至：{new_file_path}")
-        # 防止 CMD 直接退出
-        input("处理完成，按回车键退出...")
+    # 更新产品统计表的销售表
+    self.update_product_sales(product_ws, product_sales, e_sales)
+
+    # 保存处理后的产品统计表（不修改其他表）
+    today = datetime.now()
+    new_file_name = f"济南 产品统计表{today.month}-{today.day}.xlsx"
+    new_file_path = os.path.join(os.path.dirname(product_file_path), new_file_name)
+    product_wb.save(new_file_path)
+
+    print(f"[成功] 文件已保存至：{new_file_path}")
+    input("处理完成，按回车键退出...")
 
     def merge_product_sales(self, ranking_ws):
         """
