@@ -85,6 +85,9 @@ class ExcelProcessorApp:
                 product_name = "抹茶冷萃鲜牛乳"
             elif ("芋泥" in product_name or "香芋" in product_name) and "鲜牛乳" in product_name:
                 product_name = "香芋冷萃鲜牛乳"
+            #如果同时名称中含有冰淇淋的同时含有鲜奶或者牛奶二字都会被合并为鲜奶冰淇淋    
+            elif ("鲜奶" in product_name or "牛奶" in product_name) and "冰淇淋" in product_name:
+                product_name = "鲜奶冰淇淋"
             elif "蔓越莓" in product_name:
                 product_name = "蔓越莓胶原酸奶"
             elif "双蛋白" in product_name:
@@ -95,8 +98,6 @@ class ExcelProcessorApp:
                 product_name = "芝士酸奶"
             elif "紫米" in product_name:
                 product_name = "紫米酸奶"
-            elif "鲜牛奶" in product_name:
-                product_name = "鲜牛奶"
             elif "液体酸奶" in product_name:
                 product_name = "液体酸奶"
             elif "奶皮子" in product_name:
@@ -113,10 +114,25 @@ class ExcelProcessorApp:
                 product_name = "冷萃酸奶罐罐"
             elif "酸奶碗" in product_name:
                 product_name = "酸奶碗—开心果能量"
-     
+
+            #含有鲜牛奶的同时不含有包字的会被直接合并为鲜牛奶
+            elif "鲜牛奶" in product_name and "包" not in product_name:
+                product_name = "鲜牛奶"
+
             # 处理双皮奶合并规则：只合并果味双皮奶，不合并原味
             elif "双皮奶" in product_name and "原味" not in product_name:
                 product_name = "果味双皮奶"
+
+        # 处理特殊规则：鲜牛奶且有“包”字,查看包前面的数字，将销量乘以该数字。
+        # 名称叫做4包鲜牛乳，数量是2  那么2*4=8,将鲜牛乳的销量加8
+        
+            if "鲜牛奶" in product_name and "包" in product_name:
+                # 提取“包”前面的数字
+                match = re.search(r'(\d+(\.\d+)?)包', product_name)
+                if match:
+                    multiplier = float(match.group(1))  # 获取包前面的数字
+                    product_name = "鲜牛奶"  # 转回“鲜牛奶”作为合并后的名称
+                    quantity *= multiplier  # 调整销量
 
             # 累计销量
             if product_name not in product_sales:
