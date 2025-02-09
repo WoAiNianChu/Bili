@@ -137,8 +137,8 @@ class ExcelProcessorApp:
             # 处理商品
             raw_name = ws[f"{headers['商品名称']}{row}"].value or ""
             quantity = 1
-            if "鲜牛奶" in raw_name and "包" in raw_name:
-                if match := re.search(r'(\d+)包', raw_name):
+            if "牛奶" in raw_name and "份" in raw_name:
+                if match := re.search(r'(\d+)份', raw_name):
                     quantity = int(match.group(1))
 
             product_name = self.normalize_product_name(raw_name)
