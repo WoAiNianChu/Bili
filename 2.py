@@ -4,221 +4,222 @@ from datetime import datetime
 import threading
 from openpyxl import load_workbook
 
+def set_cell_value(ws, cell_address, value):
+    """
+    安全设置单元格值（自动处理合并单元格）
+    :param ws: 工作表对象
+    :param cell_address: 目标单元格地址（如"A1"）
+    :param value: 要设置的值
+    """
+    target_cell = ws[cell_address]
+    
+    # 检查是否在合并区域内
+    for merged_range in ws.merged_cells.ranges:
+        if target_cell.coordinate in merged_range:
+            # 找到合并区域的左上角单元格
+            top_left_cell = ws.cell(
+                row=merged_range.min_row, 
+                column=merged_range.min_col
+            )
+            # 只在左上角单元格写入值
+            if target_cell.coordinate == top_left_cell.coordinate:
+                top_left_cell.value = value
+            return
+    
+    # 非合并单元格直接写入
+    target_cell.value = value
 
 class ExcelProcessorApp:
     """Excel文件处理核心类"""
 
     def __init__(self):
         """初始化方法"""
-        # 启动后台线程预加载openpyxl
         threading.Thread(target=self.lazy_import_openpyxl).start()
 
     def lazy_import_openpyxl(self):
-        """
-        后台线程加载openpyxl模块
-        目的：提升程序启动速度，避免主线程阻塞
-        """
         global load_workbook
-        from openpyxl import load_workbook  # 用于操作Excel文件的核心库
+        from openpyxl import load_workbook
 
     def process_files(self):
-        """处理商品排行报表和产品统计表"""
-        # 获取文件路径并智能提取有效路径
+        # 文件路径获取和验证
         ranking_file_path = self.sanitize_path(input("请输入商品排行报表文件路径："))
         product_file_path = self.sanitize_path(input("请输入产品统计表文件路径："))
+        groupon_file_path = self.sanitize_path(input("请输入美团团购报表文件路径："))
 
-        if not os.path.exists(ranking_file_path) or not os.path.exists(product_file_path):
+        if not all(os.path.exists(p) for p in [ranking_file_path, product_file_path, groupon_file_path]):
             print("[错误] 文件路径无效，请检查路径是否正确")
             input("按回车键退出...")
             return
-        
+
         # 处理商品排行报表
         print(f"正在处理商品排行报表：{ranking_file_path}")
         ranking_wb = load_workbook(ranking_file_path)
-        ranking_ws = ranking_wb.active  # 获取第一个工作表
-        product_sales, e_sales = self.merge_product_sales(ranking_ws)
+        product_sales, e_sales = self.merge_product_sales(ranking_wb.active)
+
+        # 处理团购报表
+        print(f"正在处理美团团购报表：{groupon_file_path}")
+        groupon_wb = load_workbook(groupon_file_path)
+        groupon_sales = self.process_groupon_sales(groupon_wb.active)
 
         # 处理产品统计表
         print(f"正在处理产品统计表：{product_file_path}")
         product_wb = load_workbook(product_file_path)
-        product_ws = product_wb["销售表"]  # 根据实际工作表名称调整
+        product_ws = product_wb["销售表"]
 
-        # 将合并后的销量数据添加到产品统计表
-        self.update_product_sales(product_ws, product_sales, e_sales)
+        # 更新数据并添加公式
+        self.update_product_sales(product_ws, product_sales, e_sales, groupon_sales)
 
-        # 保存处理后的产品统计表
+        # 保存文件
         today = datetime.now()
-        new_file_name = f"济南 产品统计表{today.month}-{today.day}.xlsx"
-        new_file_path = os.path.join(os.path.dirname(product_file_path), new_file_name)
+        new_file_path = os.path.join(
+            os.path.dirname(product_file_path),
+            f"济南 产品统计表{today.month}-{today.day}.xlsx"
+        )
         product_wb.save(new_file_path)
-
         print(f"[成功] 文件已保存至：{new_file_path}")
-        # 防止 CMD 直接退出
         input("处理完成，按回车键退出...")
 
-    def merge_product_sales(self, ranking_ws):
-        """
-        合并商品排行报表中相似名称的商品销量，并收集饿了么外卖和美团外卖的映射销量
-        :param ranking_ws: 商品排行报表工作表
-        :return: 合并后的销量数据字典，和分别映射到饿了么外卖和美团外卖的销量
-        """
+    def merge_product_sales(self, ws):
         product_sales = {}
-        e_sales = {'饿了么外卖': {}, '美团外卖': {}}  # 用于存储饿了么外卖外脑和美团外卖销量
+        e_sales = {'饿了么外卖': {}, '美团外卖': {}}
 
-        for row in range(2, ranking_ws.max_row + 1):  # 从第2行开始读取
-            product_name = ranking_ws[f'C{row}'].value
-            quantity = ranking_ws[f'F{row}'].value
-            e_type = ranking_ws[f'E{row}'].value  # 获取E列（映射类型）
+        for row in range(2, ws.max_row + 1):
+            # 原始数据处理
+            raw_name = ws[f'C{row}'].value or ""
+            quantity = self.parse_quantity(ws[f'F{row}'].value)
+            e_type = ws[f'E{row}'].value or ""
 
-            # 确保 quantity 是数字类型，如果是字符串，尝试转换为数字
-            try:
-                quantity = float(quantity)  # 将销量值转换为浮动类型
-            except (ValueError, TypeError):
-                quantity = 0  # 如果无法转换为数字，则设为0
+            # 处理包数逻辑
+            if "鲜牛奶" in raw_name and "包" in raw_name:
+                if match := re.search(r'(\d+)包', raw_name):
+                    quantity *= int(match.group(1))
 
-            # 处理特殊合并规则
-            if "草莓" in product_name and "鲜牛乳" in product_name:
-                product_name = "草莓冷萃鲜牛乳"
-            elif "开心果" in product_name and "鲜牛乳" in product_name:
-                product_name = "开心果冷萃鲜牛乳"
-            elif "抹茶" in product_name and "鲜牛乳" in product_name:
-                product_name = "抹茶冷萃鲜牛乳"
-            elif ("芋泥" in product_name or "香芋" in product_name) and "鲜牛乳" in product_name:
-                product_name = "香芋冷萃鲜牛乳"
-            #如果同时名称中含有冰淇淋的同时含有鲜奶或者牛奶二字都会被合并为鲜奶冰淇淋    
-            elif ("鲜奶" in product_name or "牛奶" in product_name) and "冰淇淋" in product_name:
-                product_name = "鲜奶冰淇淋"
-            elif "蔓越莓" in product_name:
-                product_name = "蔓越莓胶原酸奶"
-            elif "双蛋白" in product_name:
-                product_name = "双蛋白酸奶"
-            elif "零蔗糖" in product_name:
-                product_name = "零蔗糖酸奶"
-            elif "芝士" in product_name:
-                product_name = "芝士酸奶"
-            elif "紫米" in product_name:
-                product_name = "紫米酸奶"
-            elif "液体酸奶" in product_name:
-                product_name = "液体酸奶"
-            elif "奶皮子" in product_name:
-                product_name = "奶皮子酸奶酪"
-            elif "布丁" in product_name:
-                product_name = "布丁"
-            elif "生巧" in product_name:
-                product_name = "生巧可可牛奶"
-            elif "香蕉" in product_name:
-                product_name = "香蕉牛奶"
-            elif "半口" in product_name:
-                product_name = "半口奶酪"
-            elif "罐罐" in product_name:
-                product_name = "冷萃酸奶罐罐"
-            elif "酸奶碗" in product_name:
-                product_name = "酸奶碗—开心果能量"
-
-            #含有鲜牛奶的同时不含有包字的会被直接合并为鲜牛奶
-            elif "鲜牛奶" in product_name and "包" not in product_name:
-                product_name = "鲜牛奶"
-
-            # 处理双皮奶合并规则：只合并果味双皮奶，不合并原味
-            elif "双皮奶" in product_name and "原味" not in product_name:
-                product_name = "果味双皮奶"
-
-        # 处理特殊规则：鲜牛奶且有“包”字,查看包前面的数字，将销量乘以该数字。
-        # 名称叫做4包鲜牛乳，数量是2  那么2*4=8,将鲜牛乳的销量加8
-        
-            if "鲜牛奶" in product_name and "包" in product_name:
-                # 提取“包”前面的数字
-                match = re.search(r'(\d+(\.\d+)?)包', product_name)
-                if match:
-                    multiplier = float(match.group(1))  # 获取包前面的数字
-                    product_name = "鲜牛奶"  # 转回“鲜牛奶”作为合并后的名称
-                    quantity *= multiplier  # 调整销量
+            # 标准化名称
+            product_name = self.normalize_product_name(raw_name)
 
             # 累计销量
-            if product_name not in product_sales:
-                product_sales[product_name] = 0
-            product_sales[product_name] += quantity
+            product_sales[product_name] = product_sales.get(product_name, 0) + quantity
 
-            # 根据E列信息合并到对应的销售类型（饿了么外卖或美团外卖）
+            # 渠道分类
             if "未映射饿了么" in str(e_type):
-                if product_name not in e_sales['饿了么外卖']:
-                    e_sales['饿了么外卖'][product_name] = 0
-                e_sales['饿了么外卖'][product_name] += quantity
+                e_sales['饿了么外卖'][product_name] = e_sales['饿了么外卖'].get(product_name, 0) + quantity
             elif "未映射美团" in str(e_type):
-                if product_name not in e_sales['美团外卖']:
-                    e_sales['美团外卖'][product_name] = 0
-                e_sales['美团外卖'][product_name] += quantity
+                e_sales['美团外卖'][product_name] = e_sales['美团外卖'].get(product_name, 0) + quantity
 
         return product_sales, e_sales
 
-    def update_product_sales(self, product_ws, product_sales, e_sales):
-        """
-        将商品销量更新到产品统计表
-        :param product_ws: 产品统计表工作表
-        :param product_sales: 合并后的销量数据字典
-        :param e_sales: 各销售类型（饿了么外卖、美团外卖）映射销量
-        """
-        for row in range(2, product_ws.max_row + 1):  # 从第2行开始读取
-            product_name = product_ws[f'B{row}'].value  # 获取产品名称
+    def process_groupon_sales(self, ws):
+        headers = {cell.value: cell.column_letter for cell in ws[1]}
+        required_cols = ['核销时间', '商品名称', '验证门店']
+        if missing := [col for col in required_cols if col not in headers]:
+            print(f"[错误] 缺少必要列：{', '.join(missing)}")
+            return {}
 
-            # 更新销量
-            if product_name in product_sales:
-                product_ws[f'D{row}'].value = product_sales[product_name]
-                print(f"[更新] {product_name} - 总销量: {product_sales[product_name]}")
+        groupon_sales = {}
+        today = datetime.now().date()
 
-            # 更新饿了么外卖销量
-            if product_name in e_sales['饿了么外卖']:
-                product_ws[f'H{row}'].value = e_sales['饿了么外卖'][product_name]
-                print(f"[更新] {product_name} - 饿了么外卖销量: {e_sales['饿了么外卖'][product_name]}")
+        for row in range(2, ws.max_row + 1):
+            # 日期过滤
+            date_val = ws[f"{headers['核销时间']}{row}"].value
+            if not isinstance(date_val, datetime):
+                try:
+                    date_val = datetime.strptime(date_val, "%Y-%m-%d %H:%M:%S")
+                except (ValueError, TypeError):
+                    continue
+            if date_val.date() != today:
+                continue
 
-            # 更新美团外卖销量
-            if product_name in e_sales['美团外卖']:
-                product_ws[f'G{row}'].value = e_sales['美团外卖'][product_name]
-                print(f"[更新] {product_name} - 美团外卖销量: {e_sales['美团外卖'][product_name]}")
+            # 门店过滤
+            store = ws[f"{headers['验证门店']}{row}"].value or ""
+            if "济南" not in store:
+                continue
 
-            # 只有当D列有值时才添加E列公式
-            if product_ws[f'D{row}'].value is not None and product_ws[f'D{row}'].value != "":
-                if 3 <= row <= 29:
-                   product_ws[f'E{row}'].value = f"=D{row} - SUM(F{row}:I{row})"
-                   #print(f"[添加公式] 第{row}行 E列公式：=D{row} - SUM(F{row}:I{row})")
-                
+            # 处理商品
+            raw_name = ws[f"{headers['商品名称']}{row}"].value or ""
+            quantity = 1
+            if "鲜牛奶" in raw_name and "包" in raw_name:
+                if match := re.search(r'(\d+)包', raw_name):
+                    quantity = int(match.group(1))
+
+            product_name = self.normalize_product_name(raw_name)
+            groupon_sales[product_name] = groupon_sales.get(product_name, 0) + quantity
+
+        return groupon_sales
+
+    def update_product_sales(self, ws, product_sales, e_sales, groupon_sales):
+        for row in range(2, ws.max_row + 1):
+            product_name = ws[f'B{row}'].value
+
+            # 安全写入函数
+            def write_cell(col, value):
+                if value is not None:
+                    set_cell_value(ws, f"{col}{row}", value)
+
+            # 更新数据
+            write_cell('D', product_sales.get(product_name))
+            write_cell('H', e_sales['饿了么外卖'].get(product_name))
+            write_cell('G', e_sales['美团外卖'].get(product_name))
+            write_cell('F', groupon_sales.get(product_name))
+
+            # 添加公式（处理合并单元格）
+            if 3 <= row <= 29 and ws[f'D{row}'].value is not None:
+                formula = f"=D{row}-SUM(F{row}:I{row})"
+                set_cell_value(ws, f'E{row}', formula)
+
+    def normalize_product_name(self, name):
+        """标准化商品名称（包含处理【】符号）"""
+        # 去除【】及其中间内容
+        cleaned = re.sub(r'【.*?】', '', str(name)).strip()
+        
+        rules = [
+            (lambda x: "草莓" in x and "鲜牛乳" in x, "草莓冷萃鲜牛乳"),
+            (lambda x: "开心果" in x and "鲜牛乳" in x, "开心果冷萃鲜牛乳"),
+            (lambda x: "抹茶" in x and "鲜牛乳" in x, "抹茶冷萃鲜牛乳"),
+            (lambda x: ("芋泥" in x or "香芋" in x) and "鲜牛乳" in x, "香芋冷萃鲜牛乳"),
+            (lambda x: ("鲜奶" in x or "牛奶" in x) and "冰淇淋" in x, "鲜奶冰淇淋"),
+            (lambda x: "蔓越莓" in x, "蔓越莓胶原酸奶"),
+            (lambda x: "双蛋白" in x, "双蛋白酸奶"),
+            (lambda x: "零蔗糖" in x, "零蔗糖酸奶"),
+            (lambda x: "芝士" in x, "芝士酸奶"),
+            (lambda x: "紫米" in x, "紫米酸奶"),
+            (lambda x: "液体酸奶" in x, "液体酸奶"),
+            (lambda x: "奶皮子" in x, "奶皮子酸奶酪"),
+            (lambda x: "布丁" in x, "布丁"),
+            (lambda x: "生巧" in x, "生巧可可牛奶"),
+            (lambda x: "香蕉" in x, "香蕉牛奶"),
+            (lambda x: "半口" in x, "半口奶酪"),
+            (lambda x: "罐罐" in x, "冷萃酸奶罐罐"),
+            (lambda x: "酸奶碗" in x, "酸奶碗—开心果能量"),
+            (lambda x: "鲜牛奶" in x and "包" not in x, "鲜牛奶"),
+            (lambda x: "双皮奶" in x and "原味" not in x, "果味双皮奶"),
+        ]
+
+        for condition, standardized in rules:
+            if condition(cleaned):
+                return standardized
+        return cleaned
+
+    def parse_quantity(self, value):
+        """通用数量解析"""
+        try:
+            return float(value)
+        except (ValueError, TypeError):
+            return 0
+
     def sanitize_path(self, raw_input):
-        """
-        智能清理用户输入的路径
-        :param raw_input: 用户原始输入
-        :return: 验证后的有效路径
-        """
-        # 提取所有被引号包裹的内容
-        quoted_paths = re.findall(r'["\'](.*?)["\']', raw_input)
-        
-        if quoted_paths:
-            # 取最后一个被引号包裹的内容（最可能的路径）
-            clean_path = quoted_paths[-1].strip()
-        else:
-            # 若无引号，去除首尾特殊字符
-            clean_path = raw_input.strip(" &'\"")
-        
-        # 二次验证路径格式
-        if re.match(r'^[a-zA-Z]:\\', clean_path):  # 匹配Windows路径格式
-            return clean_path
-        if os.path.sep in clean_path:  # 匹配Linux/macOS路径格式
-            return clean_path
-        
-        # 若仍无法识别，尝试原始输入处理
-        return raw_input.strip("'\" ")
-    
+        """路径清理"""
+        quoted = re.findall(r'["\'](.*?)["\']', raw_input)
+        path = quoted[-1].strip() if quoted else raw_input.strip(" &'\"")
+        return path if os.path.exists(path) else raw_input.strip("'\"")
 
-# ==================== 主程序入口 ====================
 if __name__ == "__main__":
-    # 初始化应用程序
     app = ExcelProcessorApp()
-
-    # 用户交互界面（保持不变）
     print("="*50)
     print("Excel文件处理工具")
     print("使用方法：")
-    print("1. 请输入商品排行报表和产品统计表的文件路径")
-    print("2. 按Ctrl+C退出程序")
+    print("1. 请依次输入三个文件路径")
+    print("2. 商品排行报表、产品统计表、美团团购报表")
+    print("3. 按Ctrl+C可随时退出程序")
     print("="*50)
 
     try:
@@ -226,4 +227,4 @@ if __name__ == "__main__":
     except KeyboardInterrupt:
         print("\n[系统] 程序已退出")
     except Exception as e:
-        print(f"[错误] 发生未知错误：{str(e)}")
+        print(f"[严重错误] 程序运行异常：{str(e)}")
