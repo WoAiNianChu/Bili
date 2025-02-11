@@ -94,6 +94,10 @@ class ExcelProcessorApp:
                 if match := re.search(r'(\d+)包', raw_name):
                     quantity *= int(match.group(1))
 
+            # 新增炒酸奶处理（在包数处理后乘以10）
+            if "炒酸奶" in raw_name:
+                quantity *= 10
+
             # 标准化名称
             product_name = self.normalize_product_name(raw_name)
 
@@ -140,6 +144,10 @@ class ExcelProcessorApp:
             if "牛奶" in raw_name and "份" in raw_name:
                 if match := re.search(r'(\d+)份', raw_name):
                     quantity = int(match.group(1))
+
+            # 新增炒酸奶处理（在份数处理后乘以10）
+            if "炒酸奶" in raw_name:
+                quantity *= 10
 
             product_name = self.normalize_product_name(raw_name)
             groupon_sales[product_name] = groupon_sales.get(product_name, 0) + quantity
