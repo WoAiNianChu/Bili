@@ -176,6 +176,8 @@ class ExcelProcessorApp:
             (lambda x: "开心果" in x and "鲜牛乳" in x, "开心果冷萃鲜牛乳"),
             (lambda x: "抹茶" in x and "鲜牛乳" in x, "抹茶冷萃鲜牛乳"),
             (lambda x: ("芋泥" in x or "香芋" in x) and "鲜牛乳" in x, "香芋冷萃鲜牛乳"),
+            (lambda x: "草莓" in x and "鸳鸯" in x, "草莓鸳鸯酸奶"),
+            (lambda x: "开心果" in x and "鸳鸯" in x, "开心果鸳鸯酸奶"),
             (lambda x: ("鲜奶" in x or "牛奶" in x) and "冰淇淋" in x, "鲜奶冰淇淋"),
             (lambda x: "蔓越莓" in x, "蔓越莓胶原酸奶"),
             (lambda x: "双蛋白" in x, "双蛋白酸奶"),
@@ -189,7 +191,8 @@ class ExcelProcessorApp:
             (lambda x: "香蕉" in x, "香蕉牛奶"),
             (lambda x: "半口" in x, "半口奶酪"),
             (lambda x: "罐罐" in x, "冷萃酸奶罐罐"),
-            (lambda x: "酸奶碗" in x, "酸奶碗—开心果能量"),
+            (lambda x: "开心果" in x and "酸奶碗" in x, "酸奶碗—开心果能量"),
+            (lambda x: "草莓" in x and "酸奶碗" in x, "酸奶碗—草莓"),
             (lambda x: "鲜牛奶" in x and "包" not in x, "鲜牛奶"),
             (lambda x: "双皮奶" in x and "原味" not in x, "果味双皮奶"),
         ]
