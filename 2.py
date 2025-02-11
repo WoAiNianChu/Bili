@@ -200,7 +200,7 @@ class ExcelProcessorApp:
             (lambda x: "半口" in x, "半口奶酪"),
             (lambda x: "罐罐" in x, "冷萃酸奶罐罐"),
             (lambda x: "开心果" in x and "酸奶碗" in x, "酸奶碗—开心果能量"),
-            (lambda x: "草莓" in x and "酸奶碗" in x, "酸奶碗—草莓"),
+            (lambda x: "圣诞" in x and "酸奶碗" in x, "酸奶碗—草莓"),
             (lambda x: "鲜牛奶" in x and "包" not in x, "鲜牛奶"),
             (lambda x: "双皮奶" in x and "原味" not in x, "果味双皮奶"),
         ]
