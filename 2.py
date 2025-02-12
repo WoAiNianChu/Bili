@@ -86,20 +86,21 @@ class ExcelProcessorApp:
         for row in range(2, ws.max_row + 1):
             # 原始数据处理
             raw_name = ws[f'C{row}'].value or ""
-            quantity = self.parse_quantity(ws[f'F{row}'].value)
+            original_quantity = self.parse_quantity(ws[f'F{row}'].value)
+            quantity = original_quantity  # 保存原始数值用于后续计算
             e_type = ws[f'E{row}'].value or ""
 
-            # 处理包数逻辑
-            if "鲜牛奶" in raw_name and "包" in raw_name:
-                if match := re.search(r'(\d+)包', raw_name):
-                    quantity *= int(match.group(1))
-
-            # 新增炒酸奶处理（在包数处理后乘以10）
-            if "炒酸奶" in raw_name:
-                quantity *= 10
-
-            # 标准化名称
-            product_name = self.normalize_product_name(raw_name)
+            # 鲜牛奶处理逻辑（商品排行报表）
+            if "牛奶" in raw_name:
+                # 处理包数逻辑
+                if "包" in raw_name and "次" not in raw_name:
+                    if match := re.search(r'(\d+)包', raw_name):
+                        quantity *= int(match.group(1))
+                # 无论是否包含包数，统一标准化名称
+                product_name = "鲜牛奶"
+            else:
+                # 原有其他产品的处理逻辑
+                product_name = self.normalize_product_name(raw_name)
 
             # 累计销量
             product_sales[product_name] = product_sales.get(product_name, 0) + quantity
@@ -141,15 +142,15 @@ class ExcelProcessorApp:
             # 处理商品
             raw_name = ws[f"{headers['商品名称']}{row}"].value or ""
             quantity = 1
-            if "牛奶" in raw_name and "份" in raw_name:
-                if match := re.search(r'(\d+)份', raw_name):
-                    quantity = int(match.group(1))
 
-            # 新增炒酸奶处理（在份数处理后乘以10）
-            if "炒酸奶" in raw_name:
-                quantity *= 10
+            # 团购表鲜牛奶处理逻辑
+            if "牛奶" in raw_name and "次" in raw_name:
+                if match := re.search(r'(\d+)次', raw_name):
+                    quantity *= int(match.group(1))
+                product_name = "鲜牛奶"
+            else:
+                product_name = self.normalize_product_name(raw_name)
 
-            product_name = self.normalize_product_name(raw_name)
             groupon_sales[product_name] = groupon_sales.get(product_name, 0) + quantity
 
         return groupon_sales
@@ -200,7 +201,7 @@ class ExcelProcessorApp:
             (lambda x: "半口" in x, "半口奶酪"),
             (lambda x: "罐罐" in x, "冷萃酸奶罐罐"),
             (lambda x: "开心果" in x and "酸奶碗" in x, "酸奶碗—开心果能量"),
-            (lambda x: "圣诞" in x and "酸奶碗" in x, "酸奶碗—草莓"),
+            (lambda x: ("圣诞" in x or "草莓" in x) and "酸奶碗" in x, "酸奶碗—草莓"),           
             (lambda x: "鲜牛奶" in x and "包" not in x, "鲜牛奶"),
             (lambda x: "双皮奶" in x and "原味" not in x, "果味双皮奶"),
         ]
