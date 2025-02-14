@@ -106,12 +106,9 @@ class ExcelProcessorApp:
             main_ws[f'D{row}'].value = main_ws[f'N{row}'].value
             
             # 清空E-N列数据
-            for col in ['E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N']:
+            for col in ['E', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N']:
                 main_ws[f'{col}{row}'].value = None  # 设为空值
                 
-            # 特殊处理F列前30行
-            if row <= 30:
-                main_ws[f'F{row}'].value = 0  # 填充为0
 
     def _process_material_sheet(self, wb):
         """
@@ -128,11 +125,8 @@ class ExcelProcessorApp:
             material_ws[f'D{row}'].value = material_ws[f'H{row}'].value
             
             # 清空E-H列
-            for col in ['E', 'F', 'G', 'H']:
+            for col in ['E', 'G', 'H']:
                 material_ws[f'{col}{row}'].value = None
-                
-            # 填充F列为0
-            material_ws[f'F{row}'].value = 0
 
     def _process_sales_sheet(self, wb):
         """
