@@ -204,7 +204,7 @@ class ExcelProcessorApp:
                     data["eleme"] += amount
                 elif payment_type == "余额":
                     data["member_card"] += amount
-                elif payment_type == "优惠卷销售":
+                elif payment_type == "优惠劵记账金额":
                     data["times_card"] += amount
             
             # 计算零售总额
