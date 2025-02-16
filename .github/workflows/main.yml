@@ -1,4 +1,4 @@
-name: Build Python EXE
+name: Build 重置表 EXE
 
 on:
   push:
@@ -36,5 +36,5 @@ jobs:
       uses: actions/upload-artifact@v4
       with:
         name: excel-processor-exe
-        path: ./dist/1.exe
+        path: ./dist/重置表.exe
         retention-days: 7
