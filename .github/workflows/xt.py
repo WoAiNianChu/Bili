@@ -1,4 +1,4 @@
-name: Build Python EXE
+name: Build 小条 EXE
 
 on:
   push:
