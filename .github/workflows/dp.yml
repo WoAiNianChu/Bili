@@ -35,6 +35,6 @@ jobs:
     - name: Upload EXE as artifact
       uses: actions/upload-artifact@v4
       with:
-        name: excel-processor-exe
+        name: 点评-exe
         path: ./dist/点评.exe
         retention-days: 7
