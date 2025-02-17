@@ -30,11 +30,11 @@ jobs:
 
     - name: Create EXE with PyInstaller
       run: |
-        pyinstaller --onefile --hidden-import=openpyxl 1.py  # 确保 openpyxl 被打包
+        pyinstaller --onefile --hidden-import=openpyxl czb.py  # 确保 openpyxl 被打包
 
     - name: Upload EXE as artifact
       uses: actions/upload-artifact@v4
       with:
-        name: excel-processor-exe
+        name: czb-exe
         path: ./dist/重置表.exe
         retention-days: 7
