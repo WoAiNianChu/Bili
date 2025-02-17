@@ -3,6 +3,8 @@ import re
 import threading
 import datetime
 from openpyxl import load_workbook
+import warnings
+warnings.filterwarnings("ignore", category=UserWarning, module="openpyxl")
 
 
 class ExcelProcessorApp:
@@ -138,6 +140,9 @@ class ExcelProcessorApp:
             wb = load_workbook(file_path, data_only=True)
             total = 0.0
             date_formats = [
+                # 新增支持带下划线的时间格式
+                '%Y-%m-%d %H_%M_%S',
+                '%Y/%m/%d %H_%M_%S',
                 '%Y-%m-%d %H:%M:%S',
                 '%Y/%m/%d %H:%M:%S',
                 '%Y-%m-%d',
@@ -149,9 +154,15 @@ class ExcelProcessorApp:
                 if not row or row[0] is None:
                     continue
 
-                # 日期解析
+                # 日期解析增强：处理带下划线的日期格式
                 cell_date = None
                 raw_value = str(row[0]).strip()
+                
+                # 尝试提取日期部分（处理可能附加的文字）
+                date_part = re.search(r'\d{4}[-/]\d{1,2}[-/]\d{1,2}', raw_value)
+                if date_part:
+                    raw_value = date_part.group()
+
                 for fmt in date_formats:
                     try:
                         cell_date = datetime.datetime.strptime(raw_value, fmt).date()
@@ -162,18 +173,27 @@ class ExcelProcessorApp:
                 if cell_date != target_date:
                     continue
 
-                # 数值处理
-                k_value = row[10] if len(row) > 10 else 0
+                # 列索引有效性检查
+                if len(row) <= 10:
+                    print(f"⚠️ 行数据列数不足，忽略该行：{row}")
+                    continue
+
+                k_value = row[10]
                 try:
-                    total += float(k_value) if k_value not in (None, "") else 0.0
-                except ValueError:
-                    print(f"⚠️ 忽略无效数值：{k_value}")
+                    # 处理Excel可能返回的空字符串或None
+                    numeric_value = float(k_value) if k_value not in (None, "", " ") else 0.0
+                    total += numeric_value
+                except ValueError as ve:
+                    print(f"⚠️ 忽略无效数值：{k_value}，错误：{str(ve)}")
+                except TypeError as te:
+                    print(f"⚠️ 类型错误：{k_value}，错误：{str(te)}")
             
+            print(f"ℹ️ 已处理团购表，目标日期{target_date}，累计金额：{total}")
             return total
         except Exception as e:
             print(f"❌ 团购表处理错误：{str(e)}")
             return 0.0
-
+        
     def _process_payment_stats(self, file_path):
         """处理支付统计数据"""
         data = {
@@ -204,7 +224,7 @@ class ExcelProcessorApp:
                     data["eleme"] += amount
                 elif payment_type == "余额":
                     data["member_card"] += amount
-                elif payment_type == "优惠劵记账金额":
+                elif payment_type == "优惠券记账金额":
                     data["times_card"] += amount
             
             # 计算零售总额
@@ -216,7 +236,6 @@ class ExcelProcessorApp:
 
     # endregion
 
-    # region ################### 用户交互模块 ###################
     def _collect_user_inputs(self):
         """收集用户输入数据"""
         inputs = {}
