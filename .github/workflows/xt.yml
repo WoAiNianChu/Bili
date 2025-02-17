@@ -36,5 +36,5 @@ jobs:
       uses: actions/upload-artifact@v4
       with:
         name: xt-exe
-        path: ./dist/小条.exe
+        path: ./dist/xt.exe
         retention-days: 7
