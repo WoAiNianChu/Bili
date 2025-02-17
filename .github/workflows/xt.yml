@@ -30,7 +30,7 @@ jobs:
 
     - name: Create EXE with PyInstaller
       run: |
-        pyinstaller --onefile --hidden-import=openpyxl 小条.py  # 确保 openpyxl 被打包
+        pyinstaller --onefile --hidden-import=openpyxl xt.py  # 确保 openpyxl 被打包
 
     - name: Upload EXE as artifact
       uses: actions/upload-artifact@v4
