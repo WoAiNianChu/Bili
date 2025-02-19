@@ -74,7 +74,7 @@ class ExcelProcessorApp:
             today = datetime.now()
             month = str(today.month).lstrip('0')  # 去除前导零（1月显示为1而不是01）
             day = str(today.day).lstrip('0')
-            new_file_name = f"济南 产品统计表{month}.{day}.xlsx"  # 按需求生成文件名
+            new_file_name = f"青岛 产品统计表{month}.{day}.xlsx"  # 按需求生成文件名
             new_file_path = os.path.join(
                 os.path.dirname(file_path),  # 保持与原文件相同目录
                 new_file_name
@@ -132,11 +132,11 @@ class ExcelProcessorApp:
         """
         处理销售表逻辑
         操作步骤：
-            清空D3-I30区域数据
+            清空D3-J30区域数据
         """
         sales_ws = wb.worksheets[1]  # 第二个工作表
 
-        for row in range(3, 46):    # 遍历3-30行
+        for row in range(3, 46):    # 遍历3-45行
             for col in ['D', 'E', 'F', 'G', 'H', 'I', 'J']:  # 清空D-J列
                 sales_ws[f'{col}{row}'].value = None
 
