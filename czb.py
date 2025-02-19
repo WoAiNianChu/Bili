@@ -102,11 +102,11 @@ class ExcelProcessorApp:
         main_ws = wb.worksheets[0]  # 获取第一个工作表
         
         for row in range(3, 43):    # 遍历3-42行
-            # 复制N列到D列
-            main_ws[f'D{row}'].value = main_ws[f'N{row}'].value
+            # 复制O列到D列
+            main_ws[f'D{row}'].value = main_ws[f'O{row}'].value
             
-            # 清空E-N列数据
-            for col in ['E', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N']:
+            # 清空E-O列数据
+            for col in ['E', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O']:
                 main_ws[f'{col}{row}'].value = None  # 设为空值
                 
 
