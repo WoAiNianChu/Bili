@@ -304,6 +304,10 @@ class ExcelProcessorApp:
             (lambda x: ("鲜奶" in x or "牛奶" in x) and "冰淇淋" in x, "鲜奶冰淇淋"),
             (lambda x: ("酸奶" in x or "酸" in x) and "冰淇淋" in x, "酸奶冰淇淋"),       
 
+            # 酸奶碗系列
+            (lambda x: ("圣诞" in x or "草莓" in x) and "酸奶碗" in x, "酸奶碗—草莓"),
+            (lambda x: ("希腊冷萃" in x or "开心果" in x) and "酸奶碗" in x, "酸奶碗—开心果能量"),    
+
             # 鸳鸯酸奶系列
             (lambda x: "草莓" in x and "鸳鸯" in x, "草莓鸳鸯酸奶"),
             (lambda x: "开心果" in x and "鸳鸯" in x, "开心果鸳鸯酸奶"),
