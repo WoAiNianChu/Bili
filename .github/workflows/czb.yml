@@ -36,5 +36,5 @@ jobs:
       uses: actions/upload-artifact@v4
       with:
         name: czb-exe
-        path: ./dist/重置表.exe
+        path: ./dist/czb.exe
         retention-days: 7
