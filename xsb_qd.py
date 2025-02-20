@@ -319,7 +319,7 @@ class ExcelProcessorApp:
             (lambda x: "芝士" in x, "芝士酸奶"),
             (lambda x: "紫米" in x, "紫米酸奶"),
             (lambda x: "液体酸奶" in x, "液体酸奶"),
-            (lambda x: "奶皮子" in x, "奶皮子酸奶酪"),
+            (lambda x: "奶皮子" in x, "奶皮子奶酪"),
 
             # 其他商品
             (lambda x: "布丁" in x, "布丁"),
