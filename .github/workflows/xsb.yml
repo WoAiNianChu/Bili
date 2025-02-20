@@ -36,5 +36,5 @@ jobs:
       uses: actions/upload-artifact@v4
       with:
         name: xsb-exe
-        path: ./dist/销售表.exe
+        path: ./dist/xsb-jd.exe
         retention-days: 7
