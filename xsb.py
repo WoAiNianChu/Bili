@@ -327,7 +327,8 @@ class ExcelProcessorApp:
             (lambda x: "香蕉" in x, "香蕉牛奶"),
             (lambda x: "半口" in x, "半口奶酪"),
             (lambda x: "罐罐" in x, "冷萃酸奶罐罐"),
-            (lambda x: "双皮奶" in x and "原味" not in x, "果味双皮奶"),
+            (lambda x: "开心果" in x and "双皮奶" in x, "开心果双皮奶"),
+            (lambda x: "双皮奶" in x and "原味" not in x and "开心果" not in x, "果味双皮奶")
         ]
 
         # 应用匹配规则
