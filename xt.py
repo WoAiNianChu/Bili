@@ -291,8 +291,6 @@ class ExcelProcessorApp:
             ("储值", inputs["storage"]),
             ("次卡储值", inputs["times_storage"]),
             ("零售", payment_data["retail"]),
-            ("微信", payment_data["wechat"]),
-            ("支付宝", payment_data["alipay"]),
             ("美团", inputs["meituan"]),
             ("饿了么", payment_data["eleme"]),
             ("抖音", inputs["douyin"]),
