@@ -115,20 +115,34 @@ class ExcelProcessorApp:
             # 处理商品排行报表
             print(f"\n正在处理商品排行报表：{os.path.basename(ranking_file)}")
             ranking_wb = load_workbook(ranking_file)
-            product_sales, e_sales = self.merge_product_sales(ranking_wb.active)
+            product_sales, e_sales, ranking_collect = self.merge_product_sales(ranking_wb.active)
 
             # 处理团购报表
             print(f"正在处理美团团购报表：{os.path.basename(groupon_file)}")
             groupon_wb = load_workbook(groupon_file)
-            groupon_sales = self.process_groupon_sales(groupon_wb.active)
+            groupon_sales, groupon_collect = self.process_groupon_sales(groupon_wb.active)
 
-            # 处理产品统计表
+            # 处理产品统计表（关键修改点）
             print(f"正在处理产品统计表：{os.path.basename(product_file)}")
             product_wb = load_workbook(product_file)
             product_ws = product_wb["销售表"]
 
-            # 更新数据
-            self.update_product_sales(product_ws, product_sales, e_sales, groupon_sales)
+            # 新增总表处理
+            if "总表" not in product_wb.sheetnames:
+                raise Exception("产品统计表中缺少'总表'工作表")
+            summary_ws = product_wb["总表"]
+
+            # 更新数据（传入总表对象）
+            self.update_product_sales(
+                product_ws=product_ws,
+                summary_ws=summary_ws,  # 新增参数
+                product_sales=product_sales,
+                e_sales=e_sales,
+                groupon_sales=groupon_sales,
+                ranking_collect=ranking_collect,
+                groupon_collect=groupon_collect
+            )
+
 
             # 生成基于当前日期的新文件名
             today = datetime.now()
@@ -157,12 +171,11 @@ class ExcelProcessorApp:
         finally:
             input("\n处理完成，按回车键退出...")
 
-
-
     def merge_product_sales(self, ws):
-        """处理商品排行报表数据"""
+        """处理商品排行报表数据（新增收藏炒酸奶处理）"""
         product_sales = {}
         e_sales = {'饿了么外卖': {}, '美团外卖': {}}
+        collect_sales = 0  # 新增收藏炒酸奶销量统计
 
         for row in range(2, ws.max_row + 1):
             # 原始数据提取
@@ -172,42 +185,42 @@ class ExcelProcessorApp:
             quantity = original_quantity
             product_name = None
 
-            # 处理鲜牛奶的特殊情况（新增核心逻辑）
+            # 处理鲜牛奶的特殊情况
             if "鲜" in raw_name and "牛奶" in raw_name:
-                # 检查包/次数量
                 match = re.search(r'(\d+)(包|次|份)', raw_name)
                 if match:
-                    # 提取数量并计算实际销量
                     multiplier = int(match.group(1))
                     quantity = original_quantity * multiplier
-                # 无论是否匹配到包/次都归类为鲜牛奶
                 product_name = "鲜牛奶"
             else:
-                # 处理其他商品逻辑
+                # 修改后的炒酸奶处理逻辑
                 if "炒酸奶" in raw_name:
-                    quantity = original_quantity * 10  # 炒酸奶按10块/份计算
+                    if "收藏" in raw_name:  # 新增收藏判断
+                        quantity = original_quantity * 2
+                        collect_sales += quantity  # 累计收藏版销量
+                        continue  # 跳过后续渠道分类
+                    else:
+                        quantity = original_quantity * 10
                 # 标准化商品名称
                 product_name = self.normalize_product_name(raw_name)
 
             # 销量累加
-            product_sales[product_name] = product_sales.get(product_name, 0) + quantity
+            if product_name:
+                product_sales[product_name] = product_sales.get(product_name, 0) + quantity
 
-            # 渠道分类（关键修改点）
+            # 渠道分类
             if "未映射饿了么" in str(e_type):
                 e_sales['饿了么外卖'][product_name] = e_sales['饿了么外卖'].get(product_name, 0) + quantity
             elif "未映射美团" in str(e_type):
                 e_sales['美团外卖'][product_name] = e_sales['美团外卖'].get(product_name, 0) + quantity
 
-        return product_sales, e_sales
+        return product_sales, e_sales, collect_sales
 
     def process_groupon_sales(self, ws):
-        """处理团购报表数据（已更新鲜牛奶逻辑）"""
+        """处理团购报表数据（新增收藏炒酸奶处理）"""
         headers = {cell.value: cell.column_letter for cell in ws[1]}
         required_cols = ['核销时间', '商品名称', '验证门店']
-        if missing := [col for col in required_cols if col not in headers]:
-            print(f"[错误] 缺少必要列：{', '.join(missing)}")
-            return {}
-
+        collect_sales = 0  # 新增收藏炒酸奶统计
         groupon_sales = {}
         today = datetime.now().date()
 
@@ -227,13 +240,12 @@ class ExcelProcessorApp:
             if "济南" not in store:
                 continue
 
-            # 商品处理（新增核心逻辑）
+            # 商品处理
             raw_name = ws[f"{headers['商品名称']}{row}"].value or ""
             original_quantity = 1  # 团购每条记录默认1次核销
             quantity = original_quantity
             product_name = None
 
-        # 处理鲜牛奶
             if "鲜" in raw_name and "牛奶" in raw_name:
                 match = re.search(r'(\d+)(包|次|份)', raw_name)
                 if match:
@@ -241,46 +253,60 @@ class ExcelProcessorApp:
                     quantity = original_quantity * multiplier
                 product_name = "鲜牛奶"
             else:
-                # 处理炒酸奶
+                # 修改后的炒酸奶处理
                 if "炒酸奶" in raw_name:
-                    quantity = original_quantity * 10
+                    if "收藏" in raw_name:  # 新增收藏判断
+                        quantity = original_quantity * 2
+                        collect_sales += quantity  # 累计收藏版销量
+                        continue  # 跳过后续处理
+                    else:
+                        quantity = original_quantity * 10
                 # 标准化商品名称
                 product_name = self.normalize_product_name(raw_name)
 
             # 累加销量
-            groupon_sales[product_name] = groupon_sales.get(product_name, 0) + quantity
+            if product_name:
+                groupon_sales[product_name] = groupon_sales.get(product_name, 0) + quantity
 
-        return groupon_sales
+        return groupon_sales, collect_sales
 
-    def update_product_sales(self, ws, product_sales, e_sales, groupon_sales):
-        """更新产品统计表"""
-        for row in range(2, ws.max_row + 1):
-            product_name = ws[f'B{row}'].value
+    def update_product_sales(self, product_ws, summary_ws, product_sales, e_sales, 
+                           groupon_sales, ranking_collect, groupon_collect):
+    
+        """更新产品统计表（新增J31写入）"""
+        # 计算收藏炒酸奶总量
+        total_collect = ranking_collect + groupon_collect
+        
+        # 关键修改：写入总表J31
+        set_cell_value(summary_ws, 'J31', total_collect)
 
-            # 安全写入函数
+        # 原有销售表更新逻辑保持不变
+        for row in range(2, product_ws.max_row + 1):
+            product_name = product_ws[f'B{row}'].value
+
             def safe_write(col, value):
-                if value is not None and value != 0:  # 只写入非零值
-                    set_cell_value(ws, f"{col}{row}", value)
+                if value is not None and value != 0:
+ # 修复点：product_ws替换错误的ws变量
+                    set_cell_value(product_ws, f"{col}{row}", value)  # 修改此处
 
-            # 获取销量数据
+            # 获取销量数据（排除收藏炒酸奶）
             total_sales = product_sales.get(product_name, 0)
             eleme_sales = e_sales['饿了么外卖'].get(product_name, 0)
             meituan_sales = e_sales['美团外卖'].get(product_name, 0)
             groupon_sales_value = groupon_sales.get(product_name, 0)
-            # 直接计算零售（D列 - 各渠道销量）
             retail_sales = total_sales - (groupon_sales_value + eleme_sales + meituan_sales)
 
             # 更新各列数据
-            safe_write('D', total_sales)  # 小条
-            safe_write('H', eleme_sales)  # 饿了么
-            safe_write('G', meituan_sales)  # 美团
-            safe_write('F', groupon_sales_value)  # 团购
-            safe_write('E', retail_sales)  # 直接填零售数据
+            safe_write('D', total_sales)
+            safe_write('H', eleme_sales)
+            safe_write('G', meituan_sales)
+            safe_write('F', groupon_sales_value)
+            safe_write('E', retail_sales)
 
-            # 添加小条计算公式（D列 = 各渠道之和）
-            if 3 <= row <= 30:  # 根据实际数据范围调整
+            # 小条计算公式（保持不变）
+            if 3 <= row <= 30:
                 formula = f"=SUM(E{row}:I{row})"
-                set_cell_value(ws, f'D{row}', formula)
+                set_cell_value(product_ws, f'D{row}', formula)  # 修改此处
 
     def normalize_product_name(self, name):
         """商品名称标准化（增强版）"""
