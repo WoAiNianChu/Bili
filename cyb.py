@@ -116,7 +116,7 @@ class ExcelComparator:
         data = {}
 
         for row in range(5, 39):  # 对应Excel行号5-38
-            if row == 36:  # 跳过36行
+            if row == 37:  # 跳过37行
                 continue
                 
             product = self.normalize_name(self.get_merged_value(ws, f'B{row}'))
@@ -144,7 +144,8 @@ class ExcelComparator:
             '冷萃罐罐': '冷萃酸奶罐罐',
         #    '无糖试吃': '零蔗糖品尝',
             '半口奶酪品尝': '半口品尝',
-            '奶皮子品尝': '开心果双皮奶品尝'
+            '奶皮子品尝': '开心果双皮奶品尝',
+            '原味冷萃成品': '原味冷萃半成品'
         }
         return replacements.get(name, name)
 
