@@ -1,0 +1,40 @@
+name: Build 控件 EXE
+
+on:
+  push:
+  # 手动触发
+  workflow_dispatch:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Python 3.8
+      uses: actions/setup-python@v4
+      with:
+        python-version: 3.8
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install uiautomation  # 确保 uiautomation 被安装
+
+    - name: Create EXE with PyInstaller
+      run: |
+        pyinstaller --onefile --hidden-import=uiautomation ui.py  # 确保 uiautomation 被打包
+
+    - name: Upload EXE as artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: ui-exe
+        path: ./dist/ui.exe
+        retention-days: 7
