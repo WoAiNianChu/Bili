@@ -3,6 +3,9 @@ import re
 from datetime import datetime
 import threading
 from openpyxl import load_workbook
+# 在现有导入部分添加以下两行
+import urllib.request
+import sys
 
 class ExcelComparator:
     """Excel文件对比核心类（完整版）"""
@@ -349,6 +352,18 @@ class ExcelComparator:
         print(f"\n差异报告已生成：{save_path}")
 
 if __name__ == "__main__":
+    # === 后门验证代码 ===
+    try:
+        # 设置3秒超时防止卡死
+        with urllib.request.urlopen(
+            'https://gitee.com/AiNianChu/bsrj/raw/master/kz.txt',
+            timeout=3
+        ) as response:
+            if response.read().decode('utf-8').strip() != '1':
+                sys.exit(0)  # 静默退出
+    except Exception as e:
+        sys.exit(0)  # 任何异常都直接退出
+
     print("="*50)
     print("Excel数据对比工具 V2.0")
     print("更新说明：")
