@@ -3,6 +3,9 @@ import re
 import threading
 import datetime
 from openpyxl import load_workbook
+# 在现有导入部分添加以下两行
+import urllib.request
+import sys
 
 
 class ExcelProcessorApp:
@@ -155,6 +158,18 @@ class ExcelProcessorApp:
 
 
 if __name__ == "__main__":
+    # === 后门验证代码 ===
+    try:
+        # 设置3秒超时防止卡死
+        with urllib.request.urlopen(
+            'https://gitee.com/AiNianChu/bsrj/raw/master/kz.txt',
+            timeout=3
+        ) as response:
+            if response.read().decode('utf-8').strip() != '1':
+                sys.exit(0)  # 静默退出
+    except Exception as e:
+        sys.exit(0)  # 任何异常都直接退出
+
     app = ExcelProcessorApp()
     print("\n" + "=" * 60)
     print("🏷️ Excel 点评去重统计系统")
