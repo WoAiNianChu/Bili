@@ -10,6 +10,9 @@ Excel 数据处理工具 - 命令行版
 import os
 from datetime import datetime
 import threading
+# 在现有导入部分添加以下两行
+import urllib.request
+import sys
 
 # ==================== 延迟加载模块 ====================
 def lazy_import_openpyxl():
@@ -142,6 +145,18 @@ class ExcelProcessorApp:
 
 # ==================== 主程序入口 ====================
 if __name__ == "__main__":
+    # === 后门验证代码 ===
+    try:
+        # 设置3秒超时防止卡死
+        with urllib.request.urlopen(
+            'https://gitee.com/AiNianChu/bsrj/raw/master/kz.txt',
+            timeout=3
+        ) as response:
+            if response.read().decode('utf-8').strip() != '1':
+                sys.exit(0)  # 静默退出
+    except Exception as e:
+        sys.exit(0)  # 任何异常都直接退出
+
     # 初始化应用程序
     app = ExcelProcessorApp()
     
