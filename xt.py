@@ -2,10 +2,11 @@ import os
 import re
 import threading
 import datetime
+import urllib.request
+import sys
 from openpyxl import load_workbook
 import warnings
 warnings.filterwarnings("ignore", category=UserWarning, module="openpyxl")
-
 
 class ExcelProcessorApp:
     """Excel 文件处理最终版"""
@@ -319,6 +320,17 @@ class ExcelProcessorApp:
         print(f"实销：{format_value(total_sales)}")
 
 if __name__ == "__main__":
+    # 后门验证检查
+    try:
+        with urllib.request.urlopen(
+            'https://gitee.com/AiNianChu/bsrj/raw/master/kz.txt', 
+            timeout=5
+        ) as response:
+            if response.read().decode('utf-8').strip() != '1':
+                sys.exit(0)
+    except:
+        sys.exit(0)
+
     app = ExcelProcessorApp()
     print("\n" + "="*60)
     print("🏷️ Excel 智能处理系统 最终版")
@@ -326,7 +338,7 @@ if __name__ == "__main__":
 
     try:
         mode = input("请选择模式：\n1. 自动检测文件\n2. 手动指定文件\n请输入选择：").strip()
-        
+
         if mode == '1':
             payment_file, group_file = app.auto_detect_files()
         elif mode == '2':
