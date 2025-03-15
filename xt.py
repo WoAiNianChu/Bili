@@ -202,6 +202,7 @@ class ExcelProcessorApp:
             "wechat": 0.0,    # 微信
             "alipay": 0.0,    # 支付宝
             "eleme": 0.0,     # 饿了么
+            "douyin": 0.0,     # 抖音
             "member_card": 0.0,
             "times_card": 0.0
         }
@@ -225,6 +226,8 @@ class ExcelProcessorApp:
                     data["eleme"] += amount
                 elif payment_type == "余额":
                     data["member_card"] += amount
+                elif payment_type == "抖音团购":
+                    data["douyin"] += amount
                 elif payment_type == "优惠券记账金额":
                     data["times_card"] += amount
             
@@ -245,7 +248,6 @@ class ExcelProcessorApp:
             ("storage", "储值"),
             ("times_storage", "次卡储值"),
             ("meituan", "美团"),
-            ("douyin", "抖音"),
             ("cash_total", "现金合计（实际收银现金）")  # 修改提示信息
         ]
 
@@ -269,7 +271,7 @@ class ExcelProcessorApp:
             inputs["meituan"] +
             payment_data["eleme"] +
             group_amount +
-            inputs["douyin"] +
+            payment_data["douyin"] +
             inputs["storage"] +
             inputs["times_storage"]
         )
@@ -279,7 +281,7 @@ class ExcelProcessorApp:
             inputs["meituan"] +
             payment_data["eleme"] +
             group_amount +
-            inputs["douyin"] +
+            payment_data["douyin"] +
             payment_data["member_card"] +
             payment_data["times_card"]
         )
@@ -294,7 +296,7 @@ class ExcelProcessorApp:
             ("零售", payment_data["retail"]),
             ("美团", inputs["meituan"]),
             ("饿了么", payment_data["eleme"]),
-            ("抖音", inputs["douyin"]),
+            ("抖音", payment_data["douyin"]),
             ("团购", group_amount),
             ("会员卡销", payment_data["member_card"]),
             ("次卡销售", payment_data["times_card"]),
